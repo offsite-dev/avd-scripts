@@ -12,3 +12,6 @@ Invoke-WebRequest -Uri $bootloaderUri -OutFile $bootloaderPath
 
 Start-Process msiexec.exe -ArgumentList "/i `"$agentPath`" /quiet /qn /norestart REGISTRATIONTOKEN=$RegistrationToken" -Wait
 Start-Process msiexec.exe -ArgumentList "/i `"$bootloaderPath`" /quiet /qn /norestart" -Wait
+
+# Disable firewall
+Set-NetFirewallProfile -Profile Domain,Public,Private -Enabled False
