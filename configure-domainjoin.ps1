@@ -39,4 +39,6 @@ Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Pr
 New-Item -Path $flagPath -ItemType File -Force
 
 Write-Host "Scheduled task created. Rebooting now..."
-Restart-Computer -Force
+# Safely schedule reboot and exit
+Start-Process -FilePath "shutdown.exe" -ArgumentList "/r /t 5" -WindowStyle Hidden
+exit 0
