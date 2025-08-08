@@ -32,7 +32,7 @@ if (-not (Test-Path $flagPath)) {
     if (-not (Is-DomainJoined)) {
         Write-Output "Joining domain $Domain..."
         $cred = New-Object System.Management.Automation.PSCredential($DomainJoinUser, $DomainJoinPassword)
-        Add-Computer -DomainName $Domain -Credential $cred -OUPath $OUPath -ErrorAction Stop
+        Add-Computer -DomainName $Domain -Credential $cred -OUPath $OUPath 
         New-Item -Path $flagPath -ItemType File -Force
         Restart-Computer -Force
         exit 0
