@@ -29,3 +29,4 @@ Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Pr
 
 # Set flag so it doesn't re-run next time
 New-Item -Path $flagPath -ItemType File -Force
+exit 0
