@@ -15,55 +15,44 @@ param(
     $RegistrationToken
 )
 
+$flagPath = "C:\Temp\DomainJoinCompleted.txt"
+$ErrorActionPreference = "Stop"
+
 function Is-DomainJoined {
     $cs = Get-WmiObject Win32_ComputerSystem
     return $cs.PartOfDomain
 }
 
-# Step 1: Run firewall disable script (assumed to be local path on VM)
-Write-Output "Running firewall disable script: $FirewallScriptPath"
-try {
-    # Disable firewall
+if (-not (Test-Path $flagPath)) {
+    Write-Output "Running pre-domain-join steps..."
+
+    # Run firewall disable script
     Set-NetFirewallProfile -Profile Domain,Public,Private -Enabled False
-} catch {
-    Write-Warning "Failed to disable firewall $_"
-}
 
-# Convert secure string password to credential
-$cred = New-Object System.Management.Automation.PSCredential($DomainJoinUser, $DomainJoinPassword)
-
-# Step 2: Join domain if not already joined
-if (-not (Is-DomainJoined)) {
-    Write-Output "Joining domain $Domain..."
-    try {
+    if (-not (Is-DomainJoined)) {
+        Write-Output "Joining domain $Domain..."
+        $cred = New-Object System.Management.Automation.PSCredential($DomainJoinUser, $DomainJoinPassword)
         Add-Computer -DomainName $Domain -Credential $cred -OUPath $OUPath -ErrorAction Stop
-        Write-Output "Domain join succeeded, rebooting now..."
+        New-Item -Path $flagPath -ItemType File -Force
         Restart-Computer -Force
-        exit
-    } catch {
-        Write-Error "Domain join failed: $_"
-        exit 1
+        exit 0
     }
-} else {
-    Write-Output "Machine already domain joined."
 }
 
-# Step 3: After reboot, download and run AVD agent install script
 
-Write-Output "Running AVD agent install script..."
-try {
-    $agentUri = "https://query.prod.cms.rt.microsoft.com/cms/api/am/binary/RWrmXv"
-    $bootloaderUri = "https://query.prod.cms.rt.microsoft.com/cms/api/am/binary/RWrxrH"
-    $agentPath = "$env:TEMP\avdagent.msi"
-    $bootloaderPath = "$env:TEMP\avdbootloader.msi"
+# After reboot
+Write-Output "Running post-domain-join steps..."
 
-    Invoke-WebRequest -Uri $agentUri -OutFile $agentPath
-    Invoke-WebRequest -Uri $bootloaderUri -OutFile $bootloaderPath
+$agentUri = "https://query.prod.cms.rt.microsoft.com/cms/api/am/binary/RWrmXv"
+$bootloaderUri = "https://query.prod.cms.rt.microsoft.com/cms/api/am/binary/RWrxrH"
+$agentPath = "$env:TEMP\avdagent.msi"
+$bootloaderPath = "$env:TEMP\avdbootloader.msi"
 
-    Start-Process msiexec.exe -ArgumentList "/i `"$agentPath`" /quiet /qn /norestart REGISTRATIONTOKEN=$RegistrationToken" -Wait
-    Start-Process msiexec.exe -ArgumentList "/i `"$bootloaderPath`" /quiet /qn /norestart" -Wait
+Invoke-WebRequest -Uri $agentUri -OutFile $agentPath
+Invoke-WebRequest -Uri $bootloaderUri -OutFile $bootloaderPath
 
-    Write-Output "AVD agent install script completed."
-} catch {
-    Write-Warning "Failed to run AVD agent script: $_"
-}
+Start-Process msiexec.exe -ArgumentList "/i `"$agentPath`" /quiet /qn /norestart REGISTRATIONTOKEN=$RegistrationToken" -Wait
+Start-Process msiexec.exe -ArgumentList "/i `"$bootloaderPath`" /quiet /qn /norestart" -Wait
+
+Write-Output "AVD agent install script completed. Exiting."
+exit 0
