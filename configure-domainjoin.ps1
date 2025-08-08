@@ -13,7 +13,7 @@ $ErrorActionPreference = 'Stop'
 # If flag exists, skip all
 if (Test-Path $flagPath) {
     Write-Output "PreJoinSetup already completed. Skipping."
-    return
+    exit 0
 }
 
 # Run firewall disable script
